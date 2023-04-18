@@ -1,0 +1,4 @@
+log:
+  level: error
+  file: eplog.log
+  size: 10

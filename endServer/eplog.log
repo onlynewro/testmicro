@@ -1,0 +1,17 @@
+time="2023-04-18T14:59:01+09:00" level=info msg="A group of walrus emerges from the ocean" animal=walrus size=10
+time="2023-04-18T14:59:01+09:00" level=warning msg="The group's number increased tremendously!" number=122 omg=true
+time="2023-04-18T14:59:01+09:00" level=debug msg="Debugging info" number=100 omg=true
+time="2023-04-18T14:59:01+09:00" level=error msg="An error occurred" number=123 omg=true
+time="2023-04-18T14:59:34+09:00" level=info msg="A group of walrus emerges from the ocean" animal=walrus size=10
+time="2023-04-18T14:59:34+09:00" level=warning msg="The group's number increased tremendously!" number=122 omg=true
+time="2023-04-18T14:59:34+09:00" level=error msg="An error occurred" number=123 omg=true
+time="2023-04-18T15:21:44+09:00" level=info msg="A group of walrus emerges from the ocean" animal=walrus size=10
+time="2023-04-18T15:21:44+09:00" level=warning msg="The group's number increased tremendously!" number=122 omg=true
+time="2023-04-18T15:21:44+09:00" level=error msg="An error occurred" number=123 omg=true
+time="2023-04-18T15:22:22+09:00" level=info msg="A group of walrus emerges from the ocean" animal=walrus size=10
+time="2023-04-18T15:22:22+09:00" level=warning msg="The group's number increased tremendously!" number=122 omg=true
+time="2023-04-18T15:22:22+09:00" level=debug msg="Debugging info" number=100 omg=true
+time="2023-04-18T15:22:22+09:00" level=error msg="An error occurred" number=123 omg=true
+time="2023-04-18T15:24:50+09:00" level=warning msg="The group's number increased tremendously!" number=122 omg=true
+time="2023-04-18T15:24:50+09:00" level=error msg="An error occurred" number=123 omg=true
+time="2023-04-18T15:25:30+09:00" level=error msg="An error occurred" number=123 omg=true
