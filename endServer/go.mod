@@ -1,4 +1,4 @@
-module onlynewro/epserver
+module onlynewro/endserver
 
 go 1.20
 
