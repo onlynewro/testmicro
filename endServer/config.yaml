@@ -1,4 +1,9 @@
+# 2023.04.18 
 log:
-  level: error
-  file: eplog.log
+  # 로그 설정입니다.
+  level: debug  # debug, info, warnning, error
+  file: eplog.log # 로그를 출력할 파일명입니다.
   size: 10
+lib:
+  # 공유라이브러리 설정부분입니다.
+  dir: ./shared_libs
