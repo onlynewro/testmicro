@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"plugin"
@@ -126,6 +127,7 @@ func main() {
 			"omg": err.Error(),
 		}).Fatal("The application is shutting down")
 	}
+	logger.WithFields(logrus.Fields{}).Warn("Test Warnning log.")
 
 	// 서버가 시작될 때, 핸들러가 등록되었는지 확인합니다.
 	if !addedLibs {
@@ -162,7 +164,6 @@ func loadConfig() (*Config, error) {
 	return cfg, nil
 }
 
-// 로그 초기화 함수
 func initLogger(cfg *Config) (*logrus.Logger, error) {
 	// 로그 설정
 	logger := logrus.New()
@@ -171,6 +172,9 @@ func initLogger(cfg *Config) (*logrus.Logger, error) {
 		return nil, err
 	}
 	logger.SetLevel(logLevel)
+
+	// 기본 출력 장치를 아무것도 출력하지 않도록 설정
+	logger.SetOutput(ioutil.Discard)
 
 	// 파일 출력 장치 설정
 	fileWriter := &lumberjack.Logger{
@@ -182,12 +186,14 @@ func initLogger(cfg *Config) (*logrus.Logger, error) {
 		Compress:   true,
 	}
 
-	logger.SetOutput(fileWriter)
-
 	// 화면 출력 장치 설정
 	consoleWriter := logrus.New()
-	consoleWriter.SetLevel(logLevel)
+	consoleWriter.SetLevel(logrus.InfoLevel)
 	consoleWriter.SetOutput(os.Stdout)
+
+	// 파일 출력 Hook 설정
+	fileHook := &FileHook{fileWriter}
+	logger.AddHook(fileHook)
 
 	logger.AddHook(&ConsoleHook{consoleWriter})
 	logger.SetFormatter(&logrus.TextFormatter{})
@@ -209,8 +215,11 @@ type ConsoleHook struct {
 
 // ConsoleHook 구조체에 Fire() 함수 구현
 func (hook *ConsoleHook) Fire(entry *logrus.Entry) error {
-	if entry.Level <= logrus.DebugLevel {
-		// 디버그 레벨의 로그만 콘솔에 출력
+	if entry.Level == logrus.InfoLevel {
+		// INFO 레벨의 로그만 콘솔에 출력
+		hook.consoleWriter.WithFields(entry.Data).Log(entry.Level, entry.Message)
+	} else if entry.Level == logrus.WarnLevel {
+		// INFO 레벨의 로그만 콘솔에 출력
 		hook.consoleWriter.WithFields(entry.Data).Log(entry.Level, entry.Message)
 	}
 	return nil
@@ -228,7 +237,14 @@ type FileHook struct {
 
 // FileHook 구조체에 Fire() 함수 구현
 func (hook *FileHook) Fire(entry *logrus.Entry) error {
-	hook.fileWriter.Write([]byte(entry.Message + "\n"))
+	if entry.Level != logrus.InfoLevel {
+		// 로그 메시지를 기본 형식으로 변환
+		formatted, err := entry.Logger.Formatter.Format(entry)
+		if err != nil {
+			return err
+		}
+		hook.fileWriter.Write(formatted)
+	}
 	return nil
 }
 

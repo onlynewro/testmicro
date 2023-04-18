@@ -1,7 +1,7 @@
 # 2023.04.18 
 log:
   # 로그 설정입니다.
-  level: debug  # debug, info, warnning, error
+  level: debug  # debug, info, warn, error
   file: eplog.log # 로그를 출력할 파일명입니다.
   size: 10
 lib:
