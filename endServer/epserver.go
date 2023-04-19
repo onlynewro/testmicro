@@ -6,9 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"plugin"
-	"runtime"
+	"net/http"
 
-	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/natefinch/lumberjack.v2"
@@ -37,108 +36,53 @@ func main() {
 
 	logger.WithFields(logrus.Fields{}).Error("Show Error log.")
 
-	r := gin.Default()
-
 	// 환경 변수 "GOOS"를 사용하여 운영체제를 확인합니다.
-	osType := runtime.GOOS
+	//osType := runtime.GOOS
 
 	// 공유 라이브러리 폴더 경로를 지정합니다.
 	libraryDir := cfg.LibDir
 
 	// 지정된 폴더에서 파일을 찾습니다.
-	var addedLibs bool // 라이브러리 파일이 추가되었는지 여부를 저장합니다.
-	err = filepath.Walk(libraryDir, func(path string, info os.FileInfo, err error) error {
-		// 파일 확장자가 .so나 .dll인 경우에만 핸들러로 등록합니다.
-		ext := filepath.Ext(path)
-		if osType == "windows" && ext == ".dll" {
-			// 라이브러리 파일을 로드합니다.
-			lib, err := plugin.Open(path)
-			if err != nil {
-				logger.WithFields(logrus.Fields{
-					"dll": path,
-				}).Error("fail dll load.")
-				return nil
-			}
-
-			// 라이브러리 파일에서 함수를 찾습니다.
-			sym, err := lib.Lookup("Handler")
-			if err != nil {
-				logger.WithFields(logrus.Fields{
-					"dll": path,
-				}).Error("fail handler lookup.")
-				return nil
-			}
-
-			// 함수를 gin 핸들러로 등록합니다.
-			handler := sym.(func(*gin.Context))
-			name := filepath.Base(path)
-			name = name[:len(name)-4] // .dll 확장자 제거
-			r.GET(fmt.Sprintf("/%s", name), handler)
-
-			// 로그를 기록합니다.
-			//log.Printf("added %s on %s", name, osType)
-			logger.WithFields(logrus.Fields{
-				"name":   name,
-				"osType": osType,
-			}).Info("complete handler")
-			addedLibs = true
-		} else if (osType == "linux" || osType == "darwin") && ext == ".so" {
-			// 라이브러리 파일을 로드합니다.
-			lib, err := plugin.Open(path)
-			if err != nil {
-				//log.Printf("failed to load library %s: %v", path, err)
-				logger.WithFields(logrus.Fields{
-					"so": path,
-				}).Error("fail so load.")
-				return nil
-			}
-
-			// 라이브러리 파일에서 함수를 찾습니다.
-			sym, err := lib.Lookup("Handler")
-			if err != nil {
-				//log.Printf("failed to find symbol Handler in %s: %v", path, err)
-				logger.WithFields(logrus.Fields{
-					"so": path,
-				}).Error("fail handler lookup.")
-				return nil
-			}
-
-			// 함수를 gin 핸들러로 등록합니다.
-			handler := sym.(func(*gin.Context))
-			if ext == ".so" {
-				name := filepath.Base(path)
-				name = name[:len(name)-3] // .so 확장자 제거
-				r.GET(fmt.Sprintf("/%s", name), handler)
-
-				// 로그를 기록합니다.
-				//log.Printf("added %s on %s", name, osType)
-				logger.WithFields(logrus.Fields{
-					"name":   name,
-					"osType": osType,
-				}).Info("complete handler")
-				addedLibs = true
-			}
+	//var addedLibs bool // 라이브러리 파일이 추가되었는지 여부를 저장합니다.
+	err01 := filepath.Walk(libraryDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
 		}
+		if info.IsDir() {
+			return nil
+		}
+		if filepath.Ext(path) != ".so" { // 공유 라이브러리 파일이 아닐 경우 무시합니다.
+			return nil
+		}
+		p, err := plugin.Open(path)
+		if err != nil {
+			return err
+		}
+		sym, err := p.Lookup("Handler") // 공유 라이브러리 내의 "Handler" 심볼을 로드합니다.
+		if err != nil {
+			return err
+		} else {
+			logger.WithFields(logrus.Fields{}).Info("공유 라이브러리 내의 Handler 심볼을 로드합니다.")
+		}
+		handler, ok := sym.(http.Handler) // 로드한 심볼이 http.Handler 인터페이스를 구현하는지 검사합니다.
+		if !ok {
+			return fmt.Errorf("plugin does not implement http.Handler")
+		} else {
+			logger.WithFields(logrus.Fields{}).Info("로드한 심볼이 http.Handler 인터페이스를 구현하는지 검사합니다.")
+		}
+		name := filepath.Base(path)
+		pattern := "/" + name[:len(name)-3] // URL 패턴을 확장자를 제외한 파일 이름으로 지정합니다.
+		http.HandleFunc(pattern, handler.ServeHTTP) // 핸들러를 등록합니다.
+		logger.WithFields(logrus.Fields{
+			"path" : pattern,
+		}).Info("// 핸들러를 등록합니다.")
 		return nil
 	})
-
-	if err != nil {
-		logger.WithFields(logrus.Fields{
-			"omg": err.Error(),
-		}).Fatal("The application is shutting down")
+	if err01 != nil {
+		fmt.Println(err01)
 	}
-	logger.WithFields(logrus.Fields{}).Warn("Test Warnning log.")
+	http.ListenAndServe(":80", nil)
 
-	// 서버가 시작될 때, 핸들러가 등록되었는지 확인합니다.
-	if !addedLibs {
-		logger.WithFields(logrus.Fields{}).Info("No shared libraries found.")
-		return
-	}
-
-	// 서버를 실행합니다.
-	if err := r.Run(":8080"); err != nil {
-		//log.Fatal(err)
-	}
 	logger.WithFields(logrus.Fields{}).Info("서버를 실행합니다.")
 }
 
