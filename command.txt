@@ -1,3 +1,9 @@
-docker run -it -v $(pwd):/app my-image /bin/bash
+sudo docker build -t myapp .
+
+docker run -it -p 80:80 -v $(pwd):/app my-image /bin/bash
 
 go build -buildmode=plugin -o lib.so lib.go
+
+
+docker rm $(docker ps -aq)
+docker rmi $(docker images -aq)
